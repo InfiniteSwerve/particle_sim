@@ -1,0 +1,21 @@
+(executables
+ (names main)
+ ;(modes js)
+ ;(preprocess (pps js_of_ocaml-ppx))
+ ;(libraries base js_of_ocaml js_of_ocaml-lwt.graphics)
+ (libraries brownian stdio alcotest base lwt lwt.unix graphics )
+  (preprocess (pps lwt_ppx))
+
+)
+
+
+;(rule 
+;  (targets main.js)
+;   (action
+;    (run %{bin:js_of_ocaml}
+;      --source-map %{dep:main.bc} -o %{targets})))
+
+
+;; (alias 
+;;  (name brownian_motion)
+;;  (deps main.js index.html))

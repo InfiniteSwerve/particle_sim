@@ -1,5 +1,0 @@
-- grid
-- points/shapes
-- motion, velocity, position
-- data table
-- time iterator

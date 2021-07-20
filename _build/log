@@ -1,10 +1,10 @@
-# dune build --root .
+# dune runtest --root .
 # OCAMLPARAM: unset
 # Workspace root: /home/swerve/Code/Ocaml/brownian_motion
-$ /usr/bin/nproc > /tmp/dune5f52a2.output 2> /dev/null
+$ /usr/bin/nproc > /tmp/dunea74da6.output 2> /dev/null
 # Auto-detected concurrency: 4
 # disable binary cache
-$ /home/swerve/.opam/default/bin/ocamlc.opt -config > /tmp/dunea5a78e.output
+$ /home/swerve/.opam/default/bin/ocamlc.opt -config > /tmp/dune7bb758.output
 # Dune context:
 #  { name = "default"
 #  ; kind = "default"

@@ -1,0 +1,6 @@
+10[invalid] index out of bounds
+          Raised by primitive operation at Dune__exe__Brownian.insertion_sort in file "brownian.ml", line 28, characters 21-29
+          Called from Dune__exe__Brownian.test_insertion_sort in file "brownian.ml", line 283, characters 78-114
+          Called from Alcotest_engine__Core.Make.protect_test.(fun) in file "src/alcotest-engine/core.ml", line 229, characters 17-23
+          Called from Alcotest_engine__Monad.Identity.catch in file "src/alcotest-engine/monad.ml", line 24, characters 31-35
+          
