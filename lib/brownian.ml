@@ -183,8 +183,10 @@ module Grid = struct
     let v2tan = dot unit_tan ball2.velocity in
     let v1norm' = (v1norm*.(ball1.mass -. ball2.mass) +. (2. *. ball2.mass *. v2norm )) /. (ball1.mass +. ball2.mass) in
     let v2norm' = (v2norm*.(ball2.mass -. ball1.mass) +. (2. *. ball1.mass *. v1norm )) /. (ball2.mass +. ball1.mass) in
-    let v1' = (mult unit_norm (v1norm' +. v1tan)) in
-    let v2' = (mult unit_norm (v2norm' +. v2tan)) in
+    let v1' = (mult unit_norm v1norm') + (mult unit_tan v1tan) in
+    let v2' = (mult unit_norm v2norm') + (mult unit_tan v2tan) in
+    (*let v1' = (mult unit_norm (v1norm' +. v1tan)) in
+    let v2' = (mult unit_norm (v2norm' +. v2tan)) in*)
     ({ball1 with velocity = v1'},
     {ball2 with velocity = v2'})
 
@@ -316,6 +318,7 @@ module Grid = struct
     in
     {grid with objects = List.map ~f:(should_flip grid.y_range grid.timestep 1) (List.zip_exn grid.objects (List.map ~f:(should_flip bounds grid.timestep coord) (List.zip_exn grid.objects grid.future_objects)))}
 
+    
   let update (t:t) (timestep:float) : t = 
     let find_in_current_objects (b_future:Ball.t) = find_ball b_future t.objects in
     let sorted_objects = insertion_sort t.objects X in
@@ -417,7 +420,11 @@ end
   and I don't know why. Collecting kinetic energy and 
   graphing it over time for each object is probably a good
   start
+  -> Close to direct but slightly off collisions will
+    cause both objects to lose velocity and the angle 
+    of reflection to be weird.
 - Some wall collisions break the system, find out why. 
+
 
 
   ideas:

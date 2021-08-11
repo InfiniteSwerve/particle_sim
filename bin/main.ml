@@ -1,27 +1,36 @@
 open Brownian 
 open Grid
 open Base
-(*open Js_of_ocaml_lwt
-open Graphics_js*)
+module Html = Js_of_ocaml.Dom_html
+
+module Js = Js_of_ocaml.Js
+
+module G = Graphics_js
+
+(*open Js_of_ocaml_lwt*)
+
+let fmt = Printf.sprintf
+
+let js = Js.string
+
+let doc = Html.document
+
+let canvas_height, canvas_width = 450., 450.
 
 let ti n = Int.of_float n 
 
-(* Changing timestep will change how quickly the simulation
-  speeds up or slows down over time.
-  e.g. a rate of 1.2 will speed up the simulation by 20%
-  every timestep. *)
 let timestep = 0.1
-let framerate = 1./.1000.
+let framerate = 1./.5000.
 
-let objects = [{Ball.id with position = [|300.; 250.|];
+let objects = [{Ball.id with position = [|250.; 250.|];
                           radius = 20.;
-                          velocity = [|3.;0.|];
+                          velocity = [|-3.;-3.|];
                           og_id=1};
-        {Ball.id with position = [|100.;100.|];
+        {Ball.id with position = [|50.;225.|];
                       radius = 20.; 
-                      velocity = [|0.;3.|];
+                      velocity = [|0.1;0.|];
                       og_id = 2};
-{Ball.id with position = [|50.; 350.|];
+(*{Ball.id with position = [|50.; 350.|];
                           radius = 20.;
                           velocity = [|2.;0.|];
                           og_id=3};
@@ -29,10 +38,23 @@ let objects = [{Ball.id with position = [|300.; 250.|];
                       radius = 20.; 
                       velocity = [|2.;-1.|];
                       og_id = 4};
-        (*{Ball.id with position = [|60.;350.|];
+        {Ball.id with position = [|100.;350.|];
                       radius = 20.; 
-                      velocity = [| -1.;-2.|];
-                      og_id = 5} *)             
+                      velocity = [| -10.;-2.|];
+                      og_id = 5};
+        {Ball.id with position = [|120.;100.|];
+                      radius = 20.; 
+                      velocity = [| -1.;2.|];
+                      og_id = 6}; 
+        {Ball.id with position = [|50.;200.|];
+                      radius = 20.; 
+                      velocity = [| 5.;1.|];
+                      og_id = 7};
+        {Ball.id with position = [|200.;200.|];
+                      radius = 20.; 
+                      velocity = [| 5.;2.3|];
+                      og_id = 8};   *)
+
         ]
 
 let grid:Grid.t= 
@@ -45,10 +67,51 @@ let grid:Grid.t=
 
 (*let grid = Grid.initialize_populated_grid 400. 400. 1*)
 
-let place_obj grid = 
-  Graphics.(set_color black);
-  List.iter ~f:(fun b-> Graphics.fill_circle  (ti b.position.(0)) (ti b.position.(1)) (ti b.radius) ) grid.objects
+let place_circle context x_pos y_pos radius = 
+  begin
+    context##beginPath;
+    context##arc x_pos y_pos radius 0. 6.283185 Js._false;
+    context##fill;
+  end
 
+
+
+let place_obj grid (context:Html.canvasRenderingContext2D Js.t) = 
+  List.iter ~f:(fun b-> place_circle context (b.position.(0)) (b.position.(1)) (b.radius) ) grid.objects
+
+
+let ( >>= ) = Lwt.bind
+let log (s:string) = Js_of_ocaml.Firebug.console##log(js s)
+
+let create_canvas () =
+ let c = Html.createCanvas doc in
+ c##.width := Int.of_float canvas_width;
+ c##.height := Int.of_float canvas_height;
+ c
+
+
+let rec loop (canvas:Html.canvasElement Js.t) (grid:Grid.t)  = 
+  let c = canvas##getContext Html._2d_ in
+  c##strokeRect 25. 25. (400.) (400.) ;
+  place_obj grid c;
+  Js_of_ocaml_lwt.Lwt_js.sleep framerate >>= fun () ->
+    c##beginPath;
+    c##clearRect 0. 0. canvas_width canvas_height;
+    loop canvas (update grid grid.timestep)
+
+
+let start _ = 
+  let canvas = create_canvas () in
+  G.open_canvas canvas;
+  Js_of_ocaml.Dom.appendChild doc##.body canvas;
+  loop canvas grid |> ignore ;
+  Js._false
+
+
+let _ = 
+  Html.window##.onload := Html.handler start
+
+(*
 let state = ref (Lwt.task ())
 
 let wait () = fst !state
@@ -60,6 +123,7 @@ let print_change grid =
 open Lwt.Infix
 
 (* main simulation code *)
+
 let simulate grid timestep = 
   let rec simulate_aux grid timestep =
     place_obj grid;
@@ -74,31 +138,30 @@ let rec start () =
   let t = Lwt.task () in
   let _, w = !state in 
   state := t;
-  Graphics.clear_graph ();
+  Graphics_js.clear_graph ();
   let x, right = grid.x_range in
   let y, top = grid.y_range in
-  Graphics.draw_rect (ti x) (ti y) (ti (right-.x)) (ti (top-.y));
+  Graphics_js.draw_rect (ti x) (ti y) (ti (right-.x)) (ti (top-.y));
   Lwt.wakeup w (); 
-  Lwt_unix.sleep (framerate) >>=  start 
+  (*Lwt_unix*)
+  Lwt_js.sleep (framerate) >>=  start 
 ;;
 
 
 (* Driver code for simulation *)
 let _ = 
-  Graphics.open_graph " 450x450";
-  Graphics.(set_color black) ;
+  Graphics_js.open_graph " 450x450";
+  Graphics_js.(set_color black) ;
   simulate grid timestep;;
   Lwt_main.run (start ())
 
+*)
 
-
-update
-open Lwt.Infix
+(*open Lwt.Infix*)
+(*open Lwt.Infix
 let rec tic () = 
-  Stdio.print_endline "tic";
-  Lwt_unix.sleep 1.0 >>= fun () ->
+  Lwt_js.sleep 1.0 >>= fun () ->
   tic ();;
 
-(*Lwt_main.run (tic ())*)
-
-  
+let _ = 
+  Lwt_main.run (tic ())*)

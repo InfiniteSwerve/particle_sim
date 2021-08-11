@@ -156,10 +156,6 @@ module type Grid = sig
   val initialize_populated_grid : float -> float -> int -> t
 
 
-  (*val wall_collision : t -> (Ball.t * Ball.t) list*)
- (* val prune_and_sweep : Ball.t list -> Ball.t list -> axis -> (int*int) list -> (int*int) list
-
-  val collide : Ball.t -> Ball.t -> Ball.t * Ball.t*)
   
 end
 
@@ -172,11 +168,6 @@ module Grid = struct
             future_objects: Ball.t list;
             timestep: float;
             }
-
-
-
-  
-
 
 
   (* evaluates an elastic collision between
@@ -192,8 +183,10 @@ module Grid = struct
     let v2tan = dot unit_tan ball2.velocity in
     let v1norm' = (v1norm*.(ball1.mass -. ball2.mass) +. (2. *. ball2.mass *. v2norm )) /. (ball1.mass +. ball2.mass) in
     let v2norm' = (v2norm*.(ball2.mass -. ball1.mass) +. (2. *. ball1.mass *. v1norm )) /. (ball2.mass +. ball1.mass) in
-    let v1' = (mult unit_norm (v1norm' +. v1tan)) in
-    let v2' = (mult unit_norm (v2norm' +. v2tan)) in
+    let v1' = (mult unit_norm v1norm') + (mult unit_tan v1tan) in
+    let v2' = (mult unit_norm v2norm') + (mult unit_tan v2tan) in
+    (*let v1' = (mult unit_norm (v1norm' +. v1tan)) in
+    let v2' = (mult unit_norm (v2norm' +. v2tan)) in*)
     ({ball1 with velocity = v1'},
     {ball2 with velocity = v2'})
 
@@ -258,14 +251,6 @@ module Grid = struct
     else false 
 
 
-  (* Solves for the positive root of a quadratic polynomial  *)
-  let pos_quadratic_formula (a:float) (b:float) (c:float) : float = 
-    ((-.b) +. ((b**.2. -. (4. *. a *. c ))**. 0.5))/. (2. *. a)
-
-  let neg_quadratic_formula (a:float) (b:float) (c:float) : float = 
-    ((-.b) -. ((b**.2. -. (4. *. a *. c ))**. 0.5))/. (2. *. a)
-
-
   (* find_ball_collision b1 b2 finds the point in time
     where b1 and b2 first intersected *)
   let find_ball_collision (b1:Ball.t) (b2:Ball.t) : float = 
@@ -281,7 +266,6 @@ module Grid = struct
     Float.min t_plus t_minus 
 
 
-
   let continuous_object_collision (b1:Ball.t) (b2:Ball.t) (timestep:float) : (Ball.t*Ball.t) = 
     let collision_time = find_ball_collision b1 b2 in
     let b1_at_collide = Ball.forwards collision_time b1 
@@ -291,27 +275,7 @@ module Grid = struct
     and b2' = Ball.forwards (timestep -. collision_time) b2_post_update in    
     (b1',b2')
 
-    (*(* Wall collision checks whether the x or y edges of any balls exceed the
-    edges of the t, and if so, flips the component of the velocity 
-    corresponding to that edge *)
-  let wall_collision (axis:axis) (t:t) : t = 
-    let bounds,coord = 
-    match axis with
-      | X -> t.x_range, 0
-      | Y -> t.y_range, 1
-    in
-    let flip_velocity (coord:int) (obj:Ball.t) : Ball.t = 
-      let vel' = Array.copy obj.velocity in
-      vel'.(coord) <- -1.*.vel'.(coord);
-      { obj with velocity = vel'}
-    in
-    let should_flip (ball:Ball.t) : Ball.t= 
-      if Range.outside (ball.bounds.(coord)) bounds then flip_velocity coord ball
-      else ball
-    in
-    {t with objects = List.map ~f:should_flip t.objects}
 
-    *)
   let find_wall_collision_time (edge:float) (current_ball:Ball.t) (future_ball:Ball.t) (coord:int) : float = 
     let current_ball_position = current_ball.position.(coord)
     and future_ball_position = future_ball.position.(coord) in
@@ -321,6 +285,7 @@ module Grid = struct
     if (current_ball_position = future_ball_position) then failwith "div by 0!\n";
     abs (edge + radius - current_ball_position)/ (current_ball_position - future_ball_position)
 
+
   let find_colliding_edge (bounds) (coord:int) (ball:Ball.t) : float = 
     let bl, br =  ball.bounds.(coord) 
     and wl, wr = bounds in
@@ -328,14 +293,12 @@ module Grid = struct
     else if Float.(br >= wr) then wr
     else failwith "no collision in find_collision_edge!"
 
+
   let interpolate_wall_collision (edge:float) (current_ball:Ball.t) (future_ball:Ball.t) (coord:int) (timestep:float) : Ball.t = 
     let collision_time = find_wall_collision_time edge current_ball future_ball coord in
-    (*Stdio.printf "collision time is %f" collision_time;*)
     let ball_at_wall = Ball.forwards (timestep *. collision_time) current_ball in
-    (*print_array "ball at wall is" ball_at_wall.position;*)
     let ball_velocity_copy = Array.copy ball_at_wall.velocity in
     ball_velocity_copy.(coord) <- (ball_velocity_copy.(coord) *. (-. 1.) );
-    (*print_array "ball velocity at wall is" ball_velocity_copy;*)
     let bounced_ball = Ball.forwards (timestep *.( 1. -. collision_time))
       {ball_at_wall with velocity = ball_velocity_copy} in
     bounced_ball
@@ -355,6 +318,7 @@ module Grid = struct
     in
     {grid with objects = List.map ~f:(should_flip grid.y_range grid.timestep 1) (List.zip_exn grid.objects (List.map ~f:(should_flip bounds grid.timestep coord) (List.zip_exn grid.objects grid.future_objects)))}
 
+    
   let update (t:t) (timestep:float) : t = 
     let find_in_current_objects (b_future:Ball.t) = find_ball b_future t.objects in
     let sorted_objects = insertion_sort t.objects X in
@@ -371,37 +335,6 @@ module Grid = struct
       ) in
     continuous_wall_collision X {t with future_objects = collided_collisions}
     
-   
-
-    
-    
-
-
-
-(*
-  (* Update is called once every timesetep 
-    to increment the simulation *)
-  let update (t:t) (timestep:float) : t =
-    let future_objects' = List.map ~f:(Ball.forwards timestep) t.objects in
-    let sorted_obj = insertion_sort t.objects X in
-    let potential_collisions = prune_and_sweep sorted_obj [] X [] in
-    let collided_collisions = List.fold potential_collisions ~init:t.objects
-        ~f:(fun accum (b1,b2) -> 
-          if is_colliding (b1,b2) then 
-            begin let b1', b2' = continuous_object_collision b1 b2 in
-            let balls' = replace_ball b1' accum
-            |> replace_ball b2' in
-            balls'
-            end
-          else t.objects
-          )
-        in
-    let t' = {t with objects = collided_collisions} in
-    let t'' = 
-    wall_collision X t'
-    |> wall_collision Y in
-    {t'' with objects = List.map ~f:(Ball.forwards timestep) t''.objects }
- *)
   
   let initialize_populated_grid ?(self_init=true) ?(seed=0) x_len y_len balls = 
     let velocity_peak = 3. in
@@ -428,7 +361,6 @@ module Grid = struct
      timestep = 1.} in
      grid
     
-
 
 
 end
@@ -488,7 +420,11 @@ end
   and I don't know why. Collecting kinetic energy and 
   graphing it over time for each object is probably a good
   start
+  -> Close to direct but slightly off collisions will
+    cause both objects to lose velocity and the angle 
+    of reflection to be weird.
 - Some wall collisions break the system, find out why. 
+
 
 
   ideas:
