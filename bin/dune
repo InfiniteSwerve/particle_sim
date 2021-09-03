@@ -2,7 +2,7 @@
  (names main)
  (modes js)
  (preprocess (pps js_of_ocaml-ppx))
- (libraries brownian base js_of_ocaml js_of_ocaml-lwt.graphics js_of_ocaml-lwt)
+ (libraries brownian base js_of_ocaml stdio js_of_ocaml-lwt.graphics js_of_ocaml-lwt)
  ;(libraries brownian stdio alcotest base lwt lwt.unix graphics )
   ;(preprocess (pps lwt_ppx))
 )

@@ -20,27 +20,27 @@ let canvas_height, canvas_width = 450., 450.
 let ti n = Int.of_float n 
 
 let timestep = 0.1
-let framerate = 1./.5000.
+let framerate = 1./.60.
 
-let objects = [{Ball.id with position = [|250.; 250.|];
+let objects = [{Ball.id with position = [|46.; 60.|];
                           radius = 20.;
-                          velocity = [|-3.;-3.|];
+                          velocity = [|0.;0.|];
                           og_id=1};
-        {Ball.id with position = [|50.;225.|];
+        {Ball.id with position = [|90.;140.|];
                       radius = 20.; 
-                      velocity = [|0.1;0.|];
+                      velocity = [|-5.;-5.|];
                       og_id = 2};
-(*{Ball.id with position = [|50.; 350.|];
+{Ball.id with position = [|200.; 220.|];
                           radius = 20.;
-                          velocity = [|2.;0.|];
+                          velocity = [|0.;0.|];
                           og_id=3};
         {Ball.id with position = [|50.;250.|];
                       radius = 20.; 
-                      velocity = [|2.;-1.|];
+                      velocity = [|-2.;0.1|];
                       og_id = 4};
-        {Ball.id with position = [|100.;350.|];
+        {Ball.id with position = [|50.;350.|];
                       radius = 20.; 
-                      velocity = [| -10.;-2.|];
+                      velocity = [|-2.;0.|];
                       og_id = 5};
         {Ball.id with position = [|120.;100.|];
                       radius = 20.; 
@@ -53,7 +53,7 @@ let objects = [{Ball.id with position = [|250.; 250.|];
         {Ball.id with position = [|200.;200.|];
                       radius = 20.; 
                       velocity = [| 5.;2.3|];
-                      og_id = 8};   *)
+                      og_id = 8};   
 
         ]
 

@@ -1,0 +1,51 @@
+(function(joo_global_object)
+   {"use strict";
+    var
+     runtime=joo_global_object.jsoo_runtime,
+     global_data=runtime.caml_get_global_data(),
+     Stdlib_result=global_data.Stdlib__result,
+     ok=Stdlib_result[1],
+     error=Stdlib_result[2],
+     value=Stdlib_result[3],
+     get_ok=Stdlib_result[4],
+     get_error=Stdlib_result[5],
+     bind=Stdlib_result[6],
+     join=Stdlib_result[7],
+     map=Stdlib_result[8],
+     map_error=Stdlib_result[9],
+     fold=Stdlib_result[10],
+     iter=Stdlib_result[11],
+     iter_error=Stdlib_result[12],
+     is_ok=Stdlib_result[13],
+     is_error=Stdlib_result[14],
+     equal=Stdlib_result[15],
+     compare=Stdlib_result[16],
+     to_option=Stdlib_result[17],
+     to_list=Stdlib_result[18],
+     to_seq=Stdlib_result[19],
+     Result=
+      [0,
+       ok,
+       error,
+       value,
+       get_ok,
+       get_error,
+       bind,
+       join,
+       map,
+       map_error,
+       fold,
+       iter,
+       iter_error,
+       is_ok,
+       is_error,
+       equal,
+       compare,
+       to_option,
+       to_list,
+       to_seq];
+    runtime.caml_register_global(1,Result,"Result");
+    return}
+  (function(){return this}()));
+
+//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLjAsImZpbGUiOiJyZXN1bHQuY21hLmpzIiwic291cmNlUm9vdCI6IiIsIm5hbWVzIjpbXSwic291cmNlcyI6W10sIm1hcHBpbmdzIjoiOzs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7OztVIiwic291cmNlc0NvbnRlbnQiOltdfQ==

@@ -1,13 +1,5 @@
 open Base
 
-(* Helper functions for accessing tuples easily *)
-let t_hd tuple = 
-  let hd,_ = tuple in
-  hd
-
-let t_tl tuple = 
-  let _,tl = tuple in 
-  tl
 
 let if_true_do if_ do_ arg = 
   if if_ arg then do_ arg
@@ -23,7 +15,7 @@ type axis =
   | X
   | Y
 
-(* Boilerplate vector operations for 
+(* vector operations for 
   calcuating elastic collision*)
 module Vector = struct
 
@@ -124,22 +116,22 @@ module Range = struct
   type t =  float * float
 
   let r_in (num:float) (range:t) : bool = 
-    if Float.(num >= (t_hd range) && num <= (t_tl range) )then true
+    if Float.(num >= (fst range) && num <= (snd range) )then true
     else false 
 
   let intersect (t1:t) (t2:t) : bool = 
-    if r_in (t_hd t1) t2 || r_in (t_hd t2) t1 then true
+    if r_in (fst t1) t2 || r_in (fst t2) t1 then true
     else false 
 
   (* Returns false if t1 is inside (a subset of) t2*)
   let outside (t1:t) (t2:t) : bool = 
-    if r_in (t_hd t1) t2 && r_in (t_tl t1) t2 then false
+    if r_in (fst t1) t2 && r_in (snd t1) t2 then false
     else true
 
 end
 
 
-(* Module representing a bounded plane populated with balls 
+(* Module representing a bounded plane populated with objects 
   and including an update function *)
 module type Grid = sig
   type t = {x_range: (float * float);
@@ -154,7 +146,6 @@ module type Grid = sig
   (* generates a grid with x and y ranges (starting from 25)
      populated with n objects initialized to move in a random direction   *)
   val initialize_populated_grid : float -> float -> int -> t
-
 
   
 end
@@ -185,21 +176,19 @@ module Grid = struct
     let v2norm' = (v2norm*.(ball2.mass -. ball1.mass) +. (2. *. ball1.mass *. v1norm )) /. (ball2.mass +. ball1.mass) in
     let v1' = (mult unit_norm v1norm') + (mult unit_tan v1tan) in
     let v2' = (mult unit_norm v2norm') + (mult unit_tan v2tan) in
-    (*let v1' = (mult unit_norm (v1norm' +. v1tan)) in
-    let v2' = (mult unit_norm (v2norm' +. v2tan)) in*)
     ({ball1 with velocity = v1'},
     {ball2 with velocity = v2'})
 
 
   (* Prune and Sweep takes as arg 1D projection 
-    of all balls in the t, finds their overlap,
-   and returns the ID-pairs of balls whose projections overlap *)
-  let rec prune_and_sweep (balls:Ball.t list) (active:Ball.t list) (axis:axis) (out: ((Ball.t*Ball.t) list)) : (Ball.t*Ball.t) list = 
+    of all objects in the t, finds their overlap,
+   and returns the ID-pairs of objects whose projections overlap *)
+  let rec prune_and_sweep (objects:Ball.t list) (active:Ball.t list) (axis:axis) (out: ((Ball.t*Ball.t) list)) : (Ball.t*Ball.t) list = 
     let ax = 
     match axis with
     | X -> 0
     | Y -> 1 in
-    match balls with
+    match objects with
     | [] -> out
     | ball::other_balls -> 
       match active with
@@ -212,47 +201,47 @@ module Grid = struct
   (* increasing insertion sort needs to sort 
     in decreasing order so list appending in
     prune_and_sweep can be O(1) instead of O(n)  *)
-  let rec insertion_sort (balls:Ball.t list) (axis:axis) : Ball.t list = 
+  let rec insertion_sort (objects:Ball.t list) (axis:axis) : Ball.t list = 
     let ax = 
       match axis with
       | X -> 0
       | Y -> 1 in
-    let rec insert (balls:Ball.t list) (key:Ball.t) = match balls with
+    let rec insert (objects:Ball.t list) (key:Ball.t) = match objects with
       | [] -> [key]
-      | hd::tl when Poly.((t_hd hd.bounds.(ax)) > (t_hd key.bounds.(ax)))
+      | hd::tl when Poly.((fst hd.bounds.(ax)) > (fst key.bounds.(ax)))
         -> key::hd::tl
       | hd::tl -> hd:: (insert tl key)
     in
-    match balls with
+    match objects with
     | [] -> []
     | hd::tl -> insert (insertion_sort tl axis) hd
     
+  (* Gets ball with id_og=id in list objects*)
+  let find_ball (id:Ball.t) (objects:Ball.t list) : Ball.t = 
+    List.find_exn objects ~f:(fun ball -> if ball.og_id = id.og_id then true else false )
 
-  let find_ball (id:Ball.t) (balls:Ball.t list) : Ball.t = 
-    List.find_exn balls ~f:(fun ball -> if ball.og_id = id.og_id then true else false )
-
-
-  let replace_ball (ball:Ball.t) (balls:Ball.t list) : Ball.t list =
-    let rec replace_ball_aux (ball:Ball.t) (balls:Ball.t list) (out:Ball.t list) : Ball.t list = 
-      match balls with
+  (* Replaces instance of ball in list objects *)
+  let replace_ball (ball:Ball.t) (objects:Ball.t list) : Ball.t list =
+    let rec replace_ball_aux (ball:Ball.t) (objects:Ball.t list) (out:Ball.t list) : Ball.t list = 
+      match objects with
       | [] -> failwith "ball not in list"
       | hd::tl -> if hd.og_id = ball.og_id then out@(ball::tl) 
                   else  replace_ball_aux ball tl (out@[hd]) 
     in
-    replace_ball_aux ball balls []
+    replace_ball_aux ball objects []
 
 
-  (* boolean check to see if distance between 
+  (* check if distance between 
     object positions is less than object radii *)
-  let is_colliding (balls:(Ball.t * Ball.t)) : bool =
-    let ball1, ball2 = balls in
+  let is_colliding (objects:(Ball.t * Ball.t)) : bool =
+    let ball1, ball2 = objects in
     let dist = ball1.radius +. ball2.radius in 
     if Float.(Vector.dist ball1.position ball2.position <= dist) then true
     else false 
 
 
-  (* find_ball_collision b1 b2 finds the point in time
-    where b1 and b2 first intersected *)
+  (* finds the point in time
+    where b1 and b2 first intersected in their collision *)
   let find_ball_collision (b1:Ball.t) (b2:Ball.t) : float = 
     let v1 = b1.velocity 
     and v2 = b2.velocity
@@ -265,7 +254,10 @@ module Grid = struct
     and t_minus =  ( p_dist -. radii)/. v_dist in
     Float.min t_plus t_minus 
 
-
+  (* continuous_object_collision finds the point in time when
+    two objects collide, moves them to that point in time, 
+    calculates their collision, and then moves them
+    the remainder of their trajectory to the next timestep *)
   let continuous_object_collision (b1:Ball.t) (b2:Ball.t) (timestep:float) : (Ball.t*Ball.t) = 
     let collision_time = find_ball_collision b1 b2 in
     let b1_at_collide = Ball.forwards collision_time b1 
@@ -276,6 +268,10 @@ module Grid = struct
     (b1',b2')
 
 
+
+  (* **DEPRECIATED DO NOT USE**
+  find_wall_collision finds the percent of the way through
+    a timestep when a current ball will intersect edge *)
   let find_wall_collision_time (edge:float) (current_ball:Ball.t) (future_ball:Ball.t) (coord:int) : float = 
     let current_ball_position = current_ball.position.(coord)
     and future_ball_position = future_ball.position.(coord) in
@@ -285,58 +281,98 @@ module Grid = struct
     if (current_ball_position = future_ball_position) then failwith "div by 0!\n";
     abs (edge + radius - current_ball_position)/ (current_ball_position - future_ball_position)
 
-
-  let find_colliding_edge (bounds) (coord:int) (ball:Ball.t) : float = 
+  (* **DEPRECIATED DO NOT USE**
+  find_colliding_edge figures out which edge of the grid a ball
+    is intersecting *)
+  let find_colliding_edge (bounds) (coord:int) (ball:Ball.t) : float option = 
     let bl, br =  ball.bounds.(coord) 
     and wl, wr = bounds in
-    if Float.(bl <= wl) then wl
-    else if Float.(br >= wr) then wr
-    else failwith "no collision in find_collision_edge!"
+    if Float.(bl <= wl) then Some wl
+    else if Float.(br >= wr) then Some wr
+    else None
 
 
-  let interpolate_wall_collision (edge:float) (current_ball:Ball.t) (future_ball:Ball.t) (coord:int) (timestep:float) : Ball.t = 
+  (* **DEPRECIATED DO NOT USE**
+  finds the point in time when ball hits edge, flips ball velocity,
+  and returns ball at moment of collision with remaining time in timestep  *)
+  let interpolate_wall_collision (edge:float) (current_ball:Ball.t) (future_ball:Ball.t) (coord:int) (timestep:float) : (Ball.t * Ball.t * float) = 
     let collision_time = find_wall_collision_time edge current_ball future_ball coord in
     let ball_at_wall = Ball.forwards (timestep *. collision_time) current_ball in
     let ball_velocity_copy = Array.copy ball_at_wall.velocity in
     ball_velocity_copy.(coord) <- (ball_velocity_copy.(coord) *. (-. 1.) );
-    let bounced_ball = Ball.forwards (timestep *.( 1. -. collision_time))
-      {ball_at_wall with velocity = ball_velocity_copy} in
-    bounced_ball
-    
-    
-  let continuous_wall_collision (axis:axis) (grid:t) : t = 
-    let bounds, coord = 
-      match axis with
-      | X -> grid.x_range, 0
-      | Y -> grid.y_range, 1
-    in
-    let should_flip (bounds:float*float) (timestep:float) (coord:int) (balls:Ball.t*Ball.t) : Ball.t= 
-      let current_ball, future_ball = balls in
-      if Range.outside (future_ball.bounds.(coord)) bounds then
-        interpolate_wall_collision (find_colliding_edge bounds coord future_ball) current_ball future_ball coord timestep 
-      else future_ball
-    in
-    {grid with objects = List.map ~f:(should_flip grid.y_range grid.timestep 1) (List.zip_exn grid.objects (List.map ~f:(should_flip bounds grid.timestep coord) (List.zip_exn grid.objects grid.future_objects)))}
+    let time_to_go = timestep *. (1. -. collision_time) in
+    let current_ball' = {ball_at_wall with velocity = ball_velocity_copy} in
+    (current_ball', Ball.forwards time_to_go current_ball', time_to_go)
 
-    
+
+
+  (* **DEPRECIATED DO NOT USE** 
+  finds point in time where objects first collided with wall, 
+  flips velocity, and then moves them rest of timestep *)
+  let continuous_wall_collision (timestep:float) (x_bounds:Range.t) (y_bounds:Range.t) (objects:Ball.t*Ball.t) : Ball.t = 
+    let current_ball, future_ball = objects in
+    let x_edge = find_colliding_edge x_bounds 0 future_ball (* float option *) 
+    and y_edge = find_colliding_edge y_bounds 1 future_ball (* float option *) 
+    in
+    let _, ball_after_wall, _ = 
+    match x_edge, y_edge with 
+    | None, None -> current_ball, future_ball, 0.
+    | Some x, None -> interpolate_wall_collision x current_ball future_ball 0 timestep (* interpolate wall_collision x *)
+    | None, Some y -> interpolate_wall_collision y current_ball future_ball 1 timestep (* interpolate wall collision y *)
+    | Some x, Some y -> let early_collision, later_collision = if Float.(x <= y) then (x,y) else (y,x) in
+      let halfway_ball_at_wall, halway_ball_after_wall, halfway_time = interpolate_wall_collision early_collision current_ball future_ball 0 timestep
+      in
+      interpolate_wall_collision later_collision halfway_ball_at_wall halway_ball_after_wall 1 halfway_time
+    in ball_after_wall
+
+
+  (* iters through all objects 
+  and if object is outside of wall,
+  points velocity towards inside of wall
+  *)
+  let wall_collision (axis:axis) (t:t) : t = 
+    let bounds,coord = 
+    match axis with
+    | X -> t.x_range, 0
+    | Y -> t.y_range, 1
+    in
+    let flip (coord:int) (obj:Ball.t) : Ball.t = 
+      let vel' = Array.copy obj.velocity in
+      vel'.(coord) <- -1.*.vel'.(coord);
+      { obj with velocity = vel'}
+    in
+    let should_flip (ball:Ball.t) : Ball.t= 
+      let open Float in 
+      if  ((fst ball.bounds.(coord) <= (fst bounds)) && ball.velocity.(coord) < 0. )
+        || ((snd ball.bounds.(coord) >= (snd bounds)) && ball.velocity.(coord) > 0. )
+        then flip coord ball 
+      else ball
+    in
+    {t with future_objects = List.map ~f:should_flip t.future_objects}
+
+  
   let update (t:t) (timestep:float) : t = 
     let find_in_current_objects (b_future:Ball.t) = find_ball b_future t.objects in
     let sorted_objects = insertion_sort t.objects X in
     let future_objects' = List.map ~f:(Ball.forwards timestep) sorted_objects in
     let potential_collisions = prune_and_sweep future_objects' [] X [] in
-    let collided_collisions = List.fold potential_collisions ~init:future_objects'
+    let post_object_collisions = List.fold potential_collisions ~init:future_objects'
       ~f:(fun accum (b1,b2) ->
-        if is_colliding (b1,b2) then begin let c_b1, c_b2 = find_in_current_objects b1, (find_in_current_objects b2) in
+        if is_colliding (b1,b2) then begin let c_b1, c_b2 = find_in_current_objects b1, find_in_current_objects b2 in
         let b1', b2' = continuous_object_collision c_b1 c_b2 t.timestep in
         replace_ball b1' accum
         |> replace_ball b2'
         end
       else accum
       ) in
-    continuous_wall_collision X {t with future_objects = collided_collisions}
-    
-  
-  let initialize_populated_grid ?(self_init=true) ?(seed=0) x_len y_len balls = 
+    let post_wall_collisions =
+      wall_collision X  {t with future_objects = post_object_collisions}
+      |> wall_collision Y in
+    {t with objects = post_wall_collisions.future_objects}
+ 
+      
+
+  let initialize_populated_grid ?(self_init=true) ?(seed=0) x_len y_len objects = 
     let velocity_peak = 3. in
     let origin = 25. in
     let x_peak = x_len +. origin in
@@ -351,7 +387,7 @@ module Grid = struct
     let object_list = 
       List.map ~f:(fun x -> let ball = make_random_ball () in {ball with og_id = x;
                                                                       curr_id = x;}
-              ) (List.range 1 balls)
+              ) (List.range 1 objects)
     in
     let grid = 
     {x_range = (origin, x_peak);
@@ -362,7 +398,6 @@ module Grid = struct
      grid
     
 
-
 end
 
 
@@ -370,7 +405,7 @@ end
 (* notes:
 - need to use decreasing insertion sort when sorting 
   during prune and sweep so list appending is O(1)
-- I want to use a hashtable to keep track of balls, 
+- I want to use a hashtable to keep track of objects, 
   that way the og_id is just the hash number, and 
   access for collisions is constant  
   -> Decided against. We need to have an ordered
@@ -424,6 +459,9 @@ end
     cause both objects to lose velocity and the angle 
     of reflection to be weird.
 - Some wall collisions break the system, find out why. 
+- Broken cases:
+  -> Ball hits a corner or two edges at the same time
+  X Two objects hit a wall at the same time 
 
 
 
