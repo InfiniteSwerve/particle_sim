@@ -268,64 +268,6 @@ module Grid = struct
     (b1',b2')
 
 
-
-  (* **DEPRECIATED DO NOT USE**
-  find_wall_collision finds the percent of the way through
-    a timestep when a current ball will intersect edge *)
-  let find_wall_collision_time (edge:float) (current_ball:Ball.t) (future_ball:Ball.t) (coord:int) : float = 
-    let current_ball_position = current_ball.position.(coord)
-    and future_ball_position = future_ball.position.(coord) in
-    let open Float in
-    let radius = if current_ball_position < edge then (-. 1.) *. current_ball.radius 
-      else current_ball.radius in
-    if (current_ball_position = future_ball_position) then failwith "div by 0!\n";
-    abs (edge + radius - current_ball_position)/ (current_ball_position - future_ball_position)
-
-  (* **DEPRECIATED DO NOT USE**
-  find_colliding_edge figures out which edge of the grid a ball
-    is intersecting *)
-  let find_colliding_edge (bounds) (coord:int) (ball:Ball.t) : float option = 
-    let bl, br =  ball.bounds.(coord) 
-    and wl, wr = bounds in
-    if Float.(bl <= wl) then Some wl
-    else if Float.(br >= wr) then Some wr
-    else None
-
-
-  (* **DEPRECIATED DO NOT USE**
-  finds the point in time when ball hits edge, flips ball velocity,
-  and returns ball at moment of collision with remaining time in timestep  *)
-  let interpolate_wall_collision (edge:float) (current_ball:Ball.t) (future_ball:Ball.t) (coord:int) (timestep:float) : (Ball.t * Ball.t * float) = 
-    let collision_time = find_wall_collision_time edge current_ball future_ball coord in
-    let ball_at_wall = Ball.forwards (timestep *. collision_time) current_ball in
-    let ball_velocity_copy = Array.copy ball_at_wall.velocity in
-    ball_velocity_copy.(coord) <- (ball_velocity_copy.(coord) *. (-. 1.) );
-    let time_to_go = timestep *. (1. -. collision_time) in
-    let current_ball' = {ball_at_wall with velocity = ball_velocity_copy} in
-    (current_ball', Ball.forwards time_to_go current_ball', time_to_go)
-
-
-
-  (* **DEPRECIATED DO NOT USE** 
-  finds point in time where objects first collided with wall, 
-  flips velocity, and then moves them rest of timestep *)
-  let continuous_wall_collision (timestep:float) (x_bounds:Range.t) (y_bounds:Range.t) (objects:Ball.t*Ball.t) : Ball.t = 
-    let current_ball, future_ball = objects in
-    let x_edge = find_colliding_edge x_bounds 0 future_ball (* float option *) 
-    and y_edge = find_colliding_edge y_bounds 1 future_ball (* float option *) 
-    in
-    let _, ball_after_wall, _ = 
-    match x_edge, y_edge with 
-    | None, None -> current_ball, future_ball, 0.
-    | Some x, None -> interpolate_wall_collision x current_ball future_ball 0 timestep (* interpolate wall_collision x *)
-    | None, Some y -> interpolate_wall_collision y current_ball future_ball 1 timestep (* interpolate wall collision y *)
-    | Some x, Some y -> let early_collision, later_collision = if Float.(x <= y) then (x,y) else (y,x) in
-      let halfway_ball_at_wall, halway_ball_after_wall, halfway_time = interpolate_wall_collision early_collision current_ball future_ball 0 timestep
-      in
-      interpolate_wall_collision later_collision halfway_ball_at_wall halway_ball_after_wall 1 halfway_time
-    in ball_after_wall
-
-
   (* iters through all objects 
   and if object is outside of wall,
   points velocity towards inside of wall
@@ -370,35 +312,6 @@ module Grid = struct
       wall_collision X  {t with future_objects = post_object_collisions}
       |> wall_collision Y in
     {t with objects = post_wall_collisions.future_objects}
- 
-      
-  (* **DEPRECIATED DO NOT USE **
-  creates a grid of x_len by y_len and
-  object number of objects, randomly placed. *)
-  let initialize_populated_grid ?(self_init=true) ?(seed=0) (x_len:float) (y_len:float) (objects:int) = 
-    let velocity_peak = 3. in
-    let origin = 25. in
-    let x_peak = x_len +. origin in
-    let y_peak = y_len +. origin in
-    if Bool.(self_init = false) then Random.init seed 
-    else Random.self_init () ;
-    let make_random_ball () = 
-      {Ball.id with position = [|Random.float_range (origin +. Ball.id.radius) (x_peak -. Ball.id.radius);
-                                 Random.float_range (origin +. Ball.id.radius) (y_peak -. Ball.id.radius);|];
-                    velocity = [|Random.float_range (-.velocity_peak) velocity_peak|]}
-    in
-    let object_list = 
-      List.map ~f:(fun x -> let ball = make_random_ball () in {ball with og_id = x;
-                                                                      curr_id = x;}
-              ) (List.range 1 objects)
-    in
-    let grid = 
-    {x_range = (origin, x_peak);
-     y_range = (origin, y_peak);
-     objects = object_list;
-     future_objects = List.map ~f:(Ball.forwards 1.) object_list;
-     timestep = 1.} in
-     grid
     
 
 end
